@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Меню для двоих</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #fdf6e3; padding: 20px; }
+  h1 { text-align: center; color: #333; }
+  .tabs { text-align: center; margin-bottom: 20px; }
+  .tabs button { margin: 0 5px; padding: 10px 20px; cursor: pointer; border: none; border-radius: 8px; background: #ddd; font-weight: bold; }
+  .tabs button.active { background: #6c63ff; color: #fff; }
+  .menu { display: flex; flex-wrap: wrap; justify-content: center; }
+  .dish { width: 150px; margin: 10px; padding: 10px; background: #fff; border-radius: 12px; text-align: center; cursor: pointer; transition: transform .2s, box-shadow .2s; }
+  .dish:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+  .dish img { width: 100px; height: 100px; object-fit: cover; border-radius: 12px; }
+  .selected-You { border: 3px solid #4caf50; }
+  .selected-Her { border: 3px solid #ff5722; }
+  .dish-name { margin-top: 5px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Меню для двоих</h1>
+
+<div class="tabs">
+  <button data-tab="breakfast" class="active">Завтрак</button>
+  <button data-tab="lunch">Обед</button>
+  <button data-tab="dinner">Ужин</button>
+  <button data-tab="dessert">Выпечка</button>
+</div>
+
+<div class="menu" id="menu"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+// === Firebase ===
+const firebaseConfig = {
+  apiKey: "AIzaSyAHCI89Io_wUO9P0K8-q4ADflyIICTMs_8",
+  authDomain: "menu-2eb72.firebaseapp.com",
+  projectId: "menu-2eb72",
+  storageBucket: "menu-2eb72.appspot.com",
+  messagingSenderId: "869797979112",
+  appId: "1:869797979112:web:77e82da7935566502cba5d",
+  measurementId: "G-JZTPENFP7E"
+};
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getDatabase(app);
+
+// === Фиксированные пользователи ===
+const FAMILY_CODE = "our-home";
+const USER_NAME = "You";
+const OTHER_NAME = "Her";
+let currentTab = "breakfast";
+
+// === Данные меню ===
+const menuData = {
+  breakfast: [
+    {name:"Чизкейк", img:"https://via.placeholder.com/100?text=Чизкейк"},
+    {name:"Синнабоны", img:"https://via.placeholder.com/100?text=Синнабоны"},
+    {name:"Блины", img:"https://via.placeholder.com/100?text=Блины"},
+    {name:"Трубочки со сгущёнкой", img:"https://via.placeholder.com/100?text=Трубочки"}
+  ],
+  lunch: [
+    {name:"Удон", img:"https://via.placeholder.com/100?text=Удон"},
+    {name:"Макароны с ветчиной грибами", img:"https://via.placeholder.com/100?text=Макароны"},
+    {name:"Рубленные котлеты", img:"https://via.placeholder.com/100?text=Котлеты"},
+    {name:"Гнёзда с сыром грибами", img:"https://via.placeholder.com/100?text=Гнёзда"},
+    {name:"Борщ", img:"https://via.placeholder.com/100?text=Борщ"},
+    {name:"Суп с грибочками и сыром", img:"https://via.placeholder.com/100?text=Суп"}
+  ],
+  dinner: [
+    {name:"Пицца", img:"https://via.placeholder.com/100?text=Пицца"},
+    {name:"Киш", img:"https://via.placeholder.com/100?text=Киш"},
+    {name:"Шаурма", img:"https://via.placeholder.com/100?text=Шаурма"},
+    {name:"Крылышки", img:"https://via.placeholder.com/100?text=Крылышки"},
+    {name:"Макароны с фаршем", img:"https://via.placeholder.com/100?text=Макароны"},
+    {name:"Лазанья", img:"https://via.placeholder.com/100?text=Лазанья"},
+    {name:"Лепёшка с сыром чесноком", img:"https://via.placeholder.com/100?text=Лепёшка"}
+  ],
+  dessert: [
+    {name:"Медовик", img:"https://via.placeholder.com/100?text=Медовик"},
+    {name:"Шарлотка", img:"https://via.placeholder.com/100?text=Шарлотка"},
+    {name:"Пирог с клубникой", img:"https://via.placeholder.com/100?text=Пирог"}
+  ]
+};
+
+// === Функции ===
+function loadMenu() {
+  const menuEl = document.getElementById('menu');
+  menuEl.innerHTML = '';
+  menuData[currentTab].
+forEach(dish => {
+    const div = document.createElement('div');
+    div.classList.add('dish');
+    div.innerHTML = <img src="${dish.img}"><div class="dish-name">${dish.name}</div>;
+    div.onclick = () => {
+      set(ref(db, `${FAMILY_CODE}/${currentTab}/${dish.name}/${USER_NAME}`), USER_NAME);
+    };
+    menuEl.appendChild(div);
+  });
+}
+
+function listenMenu() {
+  onValue(ref(db, FAMILY_CODE), snapshot => {
+    const data = snapshot.val() || {};
+    document.querySelectorAll('.dish').forEach(dishDiv => {
+      dishDiv.classList.remove('selected-You','selected-Her');
+      const name = dishDiv.querySelector('.dish-name').textContent;
+      if(data[currentTab] && data[currentTab][name]) {
+        for(const user in data[currentTab][name]) {
+          if(user===USER_NAME) dishDiv.classList.add('selected-You');
+          else dishDiv.classList.add('selected-Her');
+        }
+      }
+    });
+  });
+}
+
+// === Старт ===
+loadMenu();
+listenMenu();
+
+// === Вкладки ===
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    loadMenu();
+  };
+});
+</script>
+</body>
+</html>
